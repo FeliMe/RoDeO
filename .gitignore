@@ -2,7 +2,7 @@
 .DS_Store
 
 # Egg-info for this package
-/rodeo.egg-info/
+*.egg-info/
 
 # Annoying directories
 .ipynb_checkpoints/
@@ -10,3 +10,4 @@ __pycache__/
 .pytest_cache/
 .vscode/
 .idea/
+.dist/

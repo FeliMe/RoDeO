@@ -9,16 +9,16 @@ RoDeO better fulfills requirements in medical applications through its **interpr
 
 # Installation
 
-RoDeO is available as a python package for python 3.7+ as [rodeo](TODO). To install, simply install it with pip:
+RoDeO is available as a python package for python 3.7+ as [rodeometric](TODO). To install, simply install it with pip:
 ```shell
-python -m pip install rodeo
+python -m pip install rodeometric
 ```
 
 # Usage
 
 ```python
 import numpy as np
-from RoDeO import RoDeO
+from rodeo import RoDeO
 
 # Init RoDeO with two classes
 rodeo = RoDeO(class_names=['a', 'b'])
