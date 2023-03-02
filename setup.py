@@ -17,7 +17,7 @@ setup(
     long_description=README,
     long_description_content_type="text/markdown",
     python_requires='>=3.7',
-    packages=["RoDeO"],
+    packages=["rodeo"],
     include_package_data=True,
     install_requires=["scipy", "torch", "torchmetrics", "torchvision"],
     keywords=["deep learning", "machine learning", "pytorch", "metrics", "AI"],

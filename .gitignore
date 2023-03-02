@@ -2,7 +2,7 @@
 .DS_Store
 
 # Egg-info for this package
-/wsup_od.egg-info/
+/rodeo.egg-info/
 
 # Annoying directories
 .ipynb_checkpoints/

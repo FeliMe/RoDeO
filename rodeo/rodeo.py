@@ -2,10 +2,10 @@ from math import log
 from typing import Dict, List, Optional
 from warnings import warn
 
-import torch
-from torch import Tensor
-from torchmetrics.functional.classification import binary_matthews_corrcoef
-from utils import centered_iou, get_center, harmonic_mean, hungarian_matching
+import numpy as np
+from sklearn.metrics import matthews_corrcoef
+
+from .utils import centered_iou, get_center, harmonic_mean, hungarian_matching
 
 
 class RoDeO:
@@ -52,8 +52,8 @@ class RoDeO:
         self.class_weight_matching: Optional[float] = class_weight_matching
         self.return_per_class: bool = return_per_class
 
-        self.pred_boxes: List[Tensor]
-        self.target_boxes: List[Tensor]
+        self.pred_boxes: List[np.ndarray]
+        self.target_boxes: List[np.ndarray]
         self.reset()
 
     def reset(self) -> None:
@@ -63,15 +63,15 @@ class RoDeO:
 
     def add(
         self,
-        preds: List[Tensor],
-        targets: List[Tensor],
+        preds: List[np.ndarray],
+        targets: List[np.ndarray],
     ) -> None:
         r"""Add predictions and targets to the metric.
 
         Args:
-            preds: List of predicted boxes. Each box is a (M_p, 5) tensor
+            preds: List of predicted boxes. Each box is a (M_p, 5) array
                 with (x, y, w, h, cls_id) for each box.
-            targets: List of target boxes. Each box is a (M_t, 5) tensor
+            targets: List of target boxes. Each box is a (M_t, 5) array
                 with (x, y, w, h, cls_id) for each box.
         """
         assert len(preds) == len(targets)
@@ -104,10 +104,10 @@ class RoDeO:
             unmatched_targets.append(unmatched_targets_)
 
         # Each box now is (x, y, w, h, cls_id)
-        matched_preds = torch.cat(matched_preds)  # (n_matched, 5)
-        matched_targets = torch.cat(matched_targets)  # (n_matched, 5)
-        unmatched_preds = torch.cat(unmatched_preds)  # (n_overpred, 5)
-        unmatched_targets = torch.cat(unmatched_targets)  # (n_underpred, 5)
+        matched_preds = np.concatenate(matched_preds)  # (n_matched, 5)
+        matched_targets = np.concatenate(matched_targets)  # (n_matched, 5)
+        unmatched_preds = np.concatenate(unmatched_preds)  # (n_overpred, 5)
+        unmatched_targets = np.concatenate(unmatched_targets)  # (n_underpred, 5)
 
         if len(matched_preds) == 0:
             warn("Unable to calculate RoDeO without predictions or targets. Returning worst possible value.")
@@ -137,7 +137,7 @@ class RoDeO:
         )
 
         # Combine with (harmonic) mean (Eq. 6 in the paper)
-        res['RoDeO/total'] = harmonic_mean(torch.tensor([
+        res['RoDeO/total'] = harmonic_mean(np.array([
             res['RoDeO/localization'],
             res['RoDeO/shape_matching'],
             res['RoDeO/classification']
@@ -173,7 +173,7 @@ class RoDeO:
                     unmatched_targets_c
                 )
                 # Combine with (harmonic) mean (Eq. 6 in the paper)
-                res[f'{key}/total'] = harmonic_mean(torch.tensor([
+                res[f'{key}/total'] = harmonic_mean(np.array([
                     res[f'{key}/localization'],
                     res[f'{key}/shape_matching'],
                     res[f'{key}/classification']
@@ -184,21 +184,21 @@ class RoDeO:
 
     def _localization_score(
         self,
-        matched_preds: Tensor,
-        matched_targets: Tensor,
-        unmatched_preds: Tensor,
-        unmatched_targets: Tensor
+        matched_preds: np.ndarray,
+        matched_targets: np.ndarray,
+        unmatched_preds: np.ndarray,
+        unmatched_targets: np.ndarray
     ) -> float:
         r"""Compute the localization score (Eq. 2 in the paper)."""
         # Normalize predictions and targets by size of target boxes
-        target_sizes = torch.cat([matched_targets[:, 2:4], matched_targets[:, 2:4]], 1)  # (n_matched, 2)
+        target_sizes = np.concatenate([matched_targets[:, 2:4], matched_targets[:, 2:4]], 1)  # (n_matched, 2)
         pred_center = get_center(matched_preds[:, :4] / target_sizes)  # (n_matched, 2)
         target_center = get_center(matched_targets[:, :4] / target_sizes)  # (n_matched, 2)
         # Get the euclidean distance between the centers
-        matched_dists = (pred_center - target_center).pow(2).sum(1)  # (n_matched)
+        matched_dists = np.power(pred_center - target_center, 2).sum(1)  # (n_matched)
         # Compute the score
-        matched_score = (-matched_dists * log(2)).exp().mean()
-        unmatched_score = torch.tensor(0.0)
+        matched_score = np.exp(-matched_dists * log(2)).mean()
+        unmatched_score = np.array(0.0)
 
         loc_score = self._weight_scores(
             matched_score,
@@ -211,15 +211,15 @@ class RoDeO:
 
     def _shape_matching_score(
         self,
-        matched_preds: Tensor,
-        matched_targets: Tensor,
-        unmatched_preds: Tensor,
-        unmatched_targets: Tensor
+        matched_preds: np.ndarray,
+        matched_targets: np.ndarray,
+        unmatched_preds: np.ndarray,
+        unmatched_targets: np.ndarray
     ) -> float:
         r"""Centered IoUs between boxes. Unmatched boxes give IoU=0
         (Eq. 3 in the paper)."""
         matched_score = centered_iou(matched_preds, matched_targets).mean()
-        unmatched_score = torch.tensor(0.0)
+        unmatched_score = np.array(0.0)
 
         shape_score = self._weight_scores(
             matched_score,
@@ -232,24 +232,23 @@ class RoDeO:
 
     def _classification_score(
         self,
-        matched_preds: Tensor,
-        matched_targets: Tensor,
-        unmatched_preds: Tensor,
-        unmatched_targets: Tensor
+        matched_preds: np.ndarray,
+        matched_targets: np.ndarray,
+        unmatched_preds: np.ndarray,
+        unmatched_targets: np.ndarray
     ) -> float:
-        r"""Clamped matthews correlation coefficient
-        (Eq. 4 in the paper)."""
+        r"""Clamped matthews correlation coefficient (Eq. 4 in the paper)."""
         pred_classes = matched_preds[:, 4]
+        pred_multi_hot = np.zeros((len(pred_classes), self.num_classes))
+        np.put_along_axis(pred_multi_hot, pred_classes[:, None].astype(np.int32), 1, 1)
+
         target_classes = matched_targets[:, 4]
-        pred_multi_hot = torch.zeros(
-            len(pred_classes), self.num_classes
-        ).scatter_(1, pred_classes[:, None].long(), 1)
-        target_multi_hot = torch.zeros(
-            len(target_classes), self.num_classes
-        ).scatter_(1, target_classes[:, None].long(), 1)
-        matched_score = binary_matthews_corrcoef(
-            pred_multi_hot, target_multi_hot).clamp_min(0.0)
-        unmatched_score = torch.tensor(0.0)
+        target_multi_hot = np.zeros((len(target_classes), self.num_classes))
+        np.put_along_axis(target_multi_hot, target_classes[:, None].astype(np.int32), 1, 1)
+
+        matched_score = matthews_corrcoef(pred_multi_hot.reshape(-1),
+                                          target_multi_hot.reshape(-1)).clip(min=0)
+        unmatched_score = np.array(0.0)
 
         cls_score = self._weight_scores(
             matched_score,
@@ -264,43 +263,36 @@ class RoDeO:
         self,
         matched_score: float,
         unmatched_score: float,
-        matched_preds: Tensor,
-        unmatched_preds: Tensor,
-        unmatched_targets: Tensor,
-    ) -> Tensor:
+        matched_preds: np.ndarray,
+        unmatched_preds: np.ndarray,
+        unmatched_targets: np.ndarray,
+    ) -> np.ndarray:
         r"""Weight the scores according to the number of matched, overpredicted
         and missed boxes (Eq. 5 in the paper)."""
         matched = len(matched_preds) * self.w_matched
         overpred = len(unmatched_preds) * self.w_overpred
         missed = len(unmatched_targets) * self.w_missed
         total = matched + overpred + missed
+
         total_score = (matched_score * matched + (overpred + missed) * unmatched_score) / total
+
         return total_score
 
-    def _get_class_cost_for_matching(self):
+    def _get_class_cost_for_matching(self) -> np.ndarray:
         r"""Get the sample-level classification performance of the data"""
         if len(self.pred_boxes) == 0:
-            return torch.tensor(0.0)
-        pred_multi_hot = torch.stack([
-            torch.zeros(self.num_classes).scatter_(0, pred[:, 4].long(), 1) for pred in self.pred_boxes])
-        target_multi_hot = torch.stack([
-            torch.zeros(self.num_classes).scatter_(0, target[:, 4].long(), 1) for target in self.target_boxes])
-        mcc = binary_matthews_corrcoef(pred_multi_hot, target_multi_hot)
-        class_cost = mcc.clamp_min(0.)
+            return np.array(0.0)
+
+        pred_multi_hot = np.zeros((len(self.pred_boxes), self.num_classes))
+        for i, pred in enumerate(self.pred_boxes):
+            np.put_along_axis(pred_multi_hot[i], pred[:, 4].astype(np.int32), 1, 0)
+
+        target_multi_hot = np.zeros((len(self.pred_boxes), self.num_classes))
+        for i, target in enumerate(self.target_boxes):
+            np.put_along_axis(target_multi_hot[i], target[:, 4].astype(np.int32), 1, 0)
+
+        mcc = matthews_corrcoef(pred_multi_hot.reshape(-1),
+                                target_multi_hot.reshape(-1))
+        class_cost = max(0, mcc)
+
         return class_cost
-
-
-if __name__ == '__main__':
-    # Init RoDeO with two classes
-    rodeo = RoDeO(class_names=['a', 'b'])
-    # Add some predictions and targets
-    pred = [torch.tensor([[0.1, 0.1, 0.2, 0.1, 0.0],
-                          [0.0, 0.3, 0.1, 0.1, 1.0],
-                          [0.2, 0.2, 0.1, 0.1, 0.0]])]
-    target = [torch.tensor([[0.0, 0.0, 0.1, 0.1, 0.0],
-                            [0.0, 0.2, 0.1, 0.1, 1.0]])]
-    rodeo.add(pred, target)
-    # Compute the score
-    score = rodeo.compute()
-    for key, val in score.items():
-        print(f'{key}: {val}')

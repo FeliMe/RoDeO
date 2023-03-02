@@ -17,17 +17,17 @@ python -m pip install rodeo
 # Usage
 
 ```python
-import torch
-from rodeo import RoDeO
+import numpy as np
+from RoDeO import RoDeO
 
 # Init RoDeO with two classes
 rodeo = RoDeO(class_names=['a', 'b'])
 # Add some predictions and targets
-pred = [torch.tensor([[0.1, 0.1, 0.2, 0.1, 0.0],
-                      [0.0, 0.3, 0.1, 0.1, 1.0],
-                      [0.2, 0.2, 0.1, 0.1, 0.0]])]
-target = [torch.tensor([[0.0, 0.0, 0.1, 0.1, 0.0],
-                        [0.0, 0.2, 0.1, 0.1, 1.0]])]
+pred = [np.array([[0.1, 0.1, 0.2, 0.1, 0.0],
+                  [0.0, 0.3, 0.1, 0.1, 1.0],
+                  [0.2, 0.2, 0.1, 0.1, 0.0]])]
+target = [np.array([[0.0, 0.0, 0.1, 0.1, 0.0],
+                    [0.0, 0.2, 0.1, 0.1, 1.0]])]
 rodeo.add(pred, target)
 # Compute the score
 score = rodeo.compute()
