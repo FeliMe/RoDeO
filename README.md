@@ -1,7 +1,18 @@
 # Robust Detection Outcome (RoDeO)
 
+<div align="center">
+
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/rodeometric)](https://pypi.org/project/rodeometric/)
+[![PyPI Status](https://badge.fury.io/py/rodeometric.svg)](https://badge.fury.io/py/rodeometric)
+[![Conda](https://img.shields.io/conda/v/conda-forge/rodeometric?label=conda&color=success)](https://anaconda.org/conda-forge/rodeometric)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/FeliMe/RoDeO/blob/main/LICENSE)
+
+</div>
+
+______________________________________________________________________
+
 Official Repository of "Robust Detection Outcome: A Metric for Pathology Detection in Medical Images"
-RoDeO is an easy to use object detection metric for applications in medical imaging, such as pathology detection in Chest X-ray images.
+RoDeO is an easy to use object detection metric useful for (but not limited to) applications in medical imaging, such as pathology detection in Chest X-ray images.
 It evaluates three sources of errors (**misclassification, faulty localization, and shape mismatch**) separately and combines them to one score.
 RoDeO better fulfills requirements in medical applications through its **interpretability**, notion of **proximity** and strong penalization of over- and under-prediction, **encouraging precise models**.
 
@@ -9,7 +20,7 @@ RoDeO better fulfills requirements in medical applications through its **interpr
 
 # Installation
 
-RoDeO is available as a python package for python 3.7+ as [rodeometric](TODO). To install, simply install it with pip:
+RoDeO is available as a python package for python 3.7+ as [rodeometric](https://pypi.org/project/rodeometric/). To install, simply install it with pip:
 ```shell
 python -m pip install rodeometric
 ```

@@ -9,7 +9,7 @@ homepage = "https://github.com/FeliMe/RoDeO"
 
 setup(
     name="rodeometric",
-    version="1.0",
+    version="0.0.1",
     description="Robust Detection Outcome: A Metric for Pathology Detection in Medical Images",
     author="Felix Meissen, Philip Müller",
     author_email="felix.meissen@tum.de, philip.j.mueller@tum.de",
