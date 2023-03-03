@@ -41,20 +41,20 @@ for key, val in score.items():
 
  RoDeO | AP@IoU | acc@IoU
 :-----:|:------:|:-------:
-![Overprediction RoDeO](./assets/boxoracle_overperclass_fixedsizesigma_RoDeO.png) | ![Overprediction AP@IoU](./assets/boxoracle_overperclass_fixedsizesigma_AP.png) | ![Overprediction acc@IoU](./assets/boxoracle_overperclass_fixedsizesigma_acc.png)
+![Overprediction RoDeO](https://github.com/FeliMe/RoDeO/blob/babef650894f8eacc82a2f23ac69997cab13d39d/assets/boxoracle_overperclass_fixedsizesigma_RoDeO.png?raw=true) | ![Overprediction AP@IoU](https://github.com/FeliMe/RoDeO/blob/babef650894f8eacc82a2f23ac69997cab13d39d/assets/boxoracle_overperclass_fixedsizesigma_AP.png?raw=true) | ![Overprediction acc@IoU](https://github.com/FeliMe/RoDeO/blob/babef650894f8eacc82a2f23ac69997cab13d39d/assets/boxoracle_overperclass_fixedsizesigma_acc.png?raw=true)
 
 2. Acc@IoU achieves high scores with underprediction due to the dominance of true negatives
 
  RoDeO | AP@IoU | acc@IoU
 :-----:|:------:|:-------:
-![Underprediction RoDeO](./assets/boxoracle_undersample_fixedsizesigma_RoDeO.png) | ![Underprediction AP@IoU](./assets/boxoracle_undersample_fixedsizesigma_AP.png) | ![Underprediction acc@IoU](./assets/boxoracle_undersample_fixedsizesigma_acc.png)
+![Underprediction RoDeO](https://github.com/FeliMe/RoDeO/blob/babef650894f8eacc82a2f23ac69997cab13d39d/assets/boxoracle_undersample_fixedsizesigma_RoDeO.png?raw=true) | ![Underprediction AP@IoU](https://github.com/FeliMe/RoDeO/blob/babef650894f8eacc82a2f23ac69997cab13d39d/assets/boxoracle_undersample_fixedsizesigma_AP.png?raw=true) | ![Underprediction acc@IoU](https://github.com/FeliMe/RoDeO/blob/babef650894f8eacc82a2f23ac69997cab13d39d/assets/boxoracle_undersample_fixedsizesigma_acc.png?raw=true)
 
 3. Compared to threshold-based metrics (like Average Precision @ IoU), RoDeO degrades more gracefully and has a better notion of proximity
 
-![Localation error RoDeO](./assets/boxoracle_randcorrupt_relpossize_RoDeO.png)
+![Localation error RoDeO](https://github.com/FeliMe/RoDeO/blob/babef650894f8eacc82a2f23ac69997cab13d39d/assets/boxoracle_randcorrupt_relpossize_RoDeO.png?raw=true)
  AP@IoU | acc@IoU
 :------:|:-------:
-![Localation error AP@IoU](./assets/boxoracle_randcorrupt_relpossize_AP.png) | ![Localation error acc@IoU](./assets/boxoracle_randcorrupt_relpossize_acc.png)
+![Localation error AP@IoU](https://github.com/FeliMe/RoDeO/blob/babef650894f8eacc82a2f23ac69997cab13d39d/assets/boxoracle_randcorrupt_relpossize_AP.png?raw=true) | ![Localation error acc@IoU](https://github.com/FeliMe/RoDeO/blob/babef650894f8eacc82a2f23ac69997cab13d39d/assets/boxoracle_randcorrupt_relpossize_acc.png?raw=true)
 
 <!-- # Citation
 If you use RoDeO in your project, please cite
