@@ -5,7 +5,7 @@ RoDeO is an easy to use object detection metric for applications in medical imag
 It evaluates three sources of errors (**misclassification, faulty localization, and shape mismatch**) separately and combines them to one score.
 RoDeO better fulfills requirements in medical applications through its **interpretability**, notion of **proximity** and strong penalization of over- and under-prediction, **encouraging precise models**.
 
-![Title Figure](./assets/title_figure.png)
+![Title Figure](https://github.com/FeliMe/RoDeO/blob/6eefdc43b62c798f2925aee65876d4eb788c14d3/assets/title_figure.png?raw=true)
 
 # Installation
 
