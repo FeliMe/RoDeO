@@ -11,7 +11,7 @@
 
 ______________________________________________________________________
 
-Official Repository of "Robust Detection Outcome: A Metric for Pathology Detection in Medical Images"
+Official Repository of [Robust Detection Outcome: A Metric for Pathology Detection in Medical Images](https://openreview.net/forum?id=zyiJi4sJ7dZ).
 RoDeO is an easy to use object detection metric useful for (but not limited to) applications in medical imaging, such as pathology detection in Chest X-ray images.
 It evaluates three sources of errors (**misclassification, faulty localization, and shape mismatch**) separately and combines them to one score.
 RoDeO better fulfills requirements in medical applications through its **interpretability**, notion of **proximity** and strong penalization of over- and under-prediction, **encouraging precise models**.
