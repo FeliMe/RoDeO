@@ -246,8 +246,8 @@ class RoDeO:
         target_multi_hot = np.zeros((len(target_classes), self.num_classes))
         np.put_along_axis(target_multi_hot, target_classes[:, None].astype(np.int32), 1, 1)
 
-        matched_score = matthews_corrcoef(pred_multi_hot.reshape(-1),
-                                          target_multi_hot.reshape(-1)).clip(min=0)
+        matched_score = np.array(matthews_corrcoef(pred_multi_hot.reshape(-1),
+                                          target_multi_hot.reshape(-1))).clip(min=0)
         unmatched_score = np.array(0.0)
 
         cls_score = self._weight_scores(
