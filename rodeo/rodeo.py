@@ -26,6 +26,7 @@ class RoDeO:
         w_missed: Optional[float] = 1.0,
         class_weight_matching: Optional[float] = None,
         return_per_class: Optional[bool] = False,
+        is_3d: Optional[bool] = False,
     ) -> None:
         r"""Metric class for Robust Detection Outcome (RoDeO).
 
@@ -51,6 +52,7 @@ class RoDeO:
         self.w_missed: float = w_missed
         self.class_weight_matching: Optional[float] = class_weight_matching
         self.return_per_class: bool = return_per_class
+        self.is_3d: bool = is_3d
 
         self.pred_boxes: List[np.ndarray]
         self.target_boxes: List[np.ndarray]
@@ -70,11 +72,19 @@ class RoDeO:
 
         Args:
             preds: List of predicted boxes. Each box is a (M_p, 5) array
-                with (x, y, w, h, cls_id) for each box.
+                with (x, y, w, h, cls_id) in 2D and (M_p, 7) array
+                with (x, y, z, w, h, d, cls_id) in 3D for each box.
             targets: List of target boxes. Each box is a (M_t, 5) array
-                with (x, y, w, h, cls_id) for each box.
+                with (x, y, w, h, cls_id) in 2D and (M_p, 7) array
+                with (x, y, z, w, h, d, cls_id) in 3D for each box.
         """
         assert len(preds) == len(targets)
+        if self.is_3d:
+            assert preds[0].shape[1] == 7
+            assert targets[0].shape[1] == 7
+        else:
+            assert preds[0].shape[1] == 5
+            assert targets[0].shape[1] == 5
         self.pred_boxes.extend(preds)
         self.target_boxes.extend(targets)
 
@@ -96,22 +106,25 @@ class RoDeO:
             (matched_preds_,
              matched_targets_,
              unmatched_preds_,
-             unmatched_targets_) = hungarian_matching(preds, targets, class_weight=class_weight)
+             unmatched_targets_) = hungarian_matching(
+                preds, targets, class_weight=class_weight, is_3d=self.is_3d)
 
             matched_preds.append(matched_preds_)
             matched_targets.append(matched_targets_)
             unmatched_preds.append(unmatched_preds_)
             unmatched_targets.append(unmatched_targets_)
 
-        # Each box now is (x, y, w, h, cls_id)
-        matched_preds = np.concatenate(matched_preds)  # (n_matched, 5)
-        matched_targets = np.concatenate(matched_targets)  # (n_matched, 5)
-        unmatched_preds = np.concatenate(unmatched_preds)  # (n_overpred, 5)
-        unmatched_targets = np.concatenate(unmatched_targets)  # (n_underpred, 5)
+        # Each box now is (x, y, w, h, cls_id) / (x, y, z, w, h, d, cls_id)
+        matched_preds = np.concatenate(matched_preds)  # (n_matched, 5 / 7)
+        matched_targets = np.concatenate(matched_targets)  # (n_matched, 5 / 7)
+        unmatched_preds = np.concatenate(unmatched_preds)  # (n_overpred, 5 / 7)
+        unmatched_targets = np.concatenate(unmatched_targets)  # (n_underpred, 5 / 7)
 
         if len(matched_preds) == 0:
-            warn("Unable to calculate RoDeO without predictions or targets. Returning worst possible value.")
-            keys = ['total', 'localization', 'shape_matching', 'classification', 'overprediction', 'underprediction']
+            warn("Unable to calculate RoDeO without predictions or targets. "
+                 "Returning worst possible value.")
+            keys = ['total', 'localization', 'shape_matching', 'classification',
+                    'overprediction', 'underprediction']
             classes = ['/' + c for c in self.class_names] + [''] if self.return_per_class else ['']
             return {f'RoDeO{cls}/{k}': 0.0 for cls in classes for k in keys}
 
@@ -191,9 +204,14 @@ class RoDeO:
     ) -> float:
         r"""Compute the localization score (Eq. 2 in the paper)."""
         # Normalize predictions and targets by size of target boxes
-        target_sizes = np.concatenate([matched_targets[:, 2:4], matched_targets[:, 2:4]], 1)  # (n_matched, 2)
-        pred_center = get_center(matched_preds[:, :4] / target_sizes)  # (n_matched, 2)
-        target_center = get_center(matched_targets[:, :4] / target_sizes)  # (n_matched, 2)
+        if self.is_3d:
+            target_sizes = matched_targets[:, 3:6].repeat(2, axis=1)  # (n_matched, 6)
+            pred_center = get_center(matched_preds[:, :6] / target_sizes)  # (n_matched, 3)
+            target_center = get_center(matched_targets[:, :6] / target_sizes)  # (n_matched, 3)
+        else:
+            target_sizes = matched_targets[:, 2:4].repeat(2, axis=1)  # (n_matched, 4)
+            pred_center = get_center(matched_preds[:, :4] / target_sizes)  # (n_matched, 2)
+            target_center = get_center(matched_targets[:, :4] / target_sizes)  # (n_matched, 2)
         # Get the euclidean distance between the centers
         matched_dists = np.power(pred_center - target_center, 2).sum(1)  # (n_matched)
         # Compute the score
@@ -218,7 +236,7 @@ class RoDeO:
     ) -> float:
         r"""Centered IoUs between boxes. Unmatched boxes give IoU=0
         (Eq. 3 in the paper)."""
-        matched_score = centered_iou(matched_preds, matched_targets).mean()
+        matched_score = centered_iou(matched_preds, matched_targets, is_3d=self.is_3d).mean()
         unmatched_score = np.array(0.0)
 
         shape_score = self._weight_scores(
@@ -246,8 +264,10 @@ class RoDeO:
         target_multi_hot = np.zeros((len(target_classes), self.num_classes))
         np.put_along_axis(target_multi_hot, target_classes[:, None].astype(np.int32), 1, 1)
 
-        matched_score = np.array(matthews_corrcoef(pred_multi_hot.reshape(-1),
-                                          target_multi_hot.reshape(-1))).clip(min=0)
+        matched_score = np.array(matthews_corrcoef(
+            pred_multi_hot.reshape(-1),
+            target_multi_hot.reshape(-1)
+        )).clip(min=0)
         unmatched_score = np.array(0.0)
 
         cls_score = self._weight_scores(

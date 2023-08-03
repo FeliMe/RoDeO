@@ -36,9 +36,29 @@ rodeo = RoDeO(class_names=['a', 'b'])
 # Add some predictions and targets
 pred = [np.array([[0.1, 0.1, 0.2, 0.1, 0.0],
                   [0.0, 0.3, 0.1, 0.1, 1.0],
-                  [0.2, 0.2, 0.1, 0.1, 0.0]])]
+                  [0.2, 0.2, 0.1, 0.1, 0.0]])]  # Box format (x,y,w,h,cls)
 target = [np.array([[0.0, 0.0, 0.1, 0.1, 0.0],
                     [0.0, 0.2, 0.1, 0.1, 1.0]])]
+rodeo.add(pred, target)
+# Compute the score
+score = rodeo.compute()
+for key, val in score.items():
+    print(f'{key}: {val}')
+```
+
+RoDeO is also available in 3D
+```python
+import numpy as np
+from rodeo import RoDeO
+
+# Init RoDeO with two classes
+rodeo = RoDeO(class_names=['a', 'b'], is_3d=True)
+# Add some predictions and targets
+pred = [np.array([[0.1, 0.1, 0.1, 0.2, 0.1, 0.1, 0.0],
+                  [0.0, 0.3, 0.0, 0.1, 0.1, 0.1, 1.0],
+                  [0.2, 0.2, 0.2, 0.1, 0.1, 0.1, 0.0]])]  # Box format (x,y,z,w,h,d,cls)
+target = [np.array([[0.0, 0.0, 0.1, 0.1, 0.1, 0.1, 0.0],
+                    [0.0, 0.2, 0.0, 0.1, 0.1, 0.1, 1.0]])]
 rodeo.add(pred, target)
 # Compute the score
 score = rodeo.compute()
