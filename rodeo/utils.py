@@ -22,15 +22,11 @@ def hungarian_matching(
         class_weight: How to weight class similarity in the cost matrix
         is_3d: Whether the boxes are 3D or not
     """
+    assert preds.shape[1] == (7 if is_3d else 5) and targets.shape[1] == (7 if is_3d else 5)
     # Perform matching
-    if is_3d:
-        assert preds.shape[1] == 7 and targets.shape[1] == 7
-        shape_cost = -generalized_box_iou_3d(preds[:, :6], targets[:, :6])
-        class_cost = -(preds[:, 6][:, None] == targets[:, 6][None, :]).astype(np.int32)
-    else:
-        assert preds.shape[1] == 5 and targets.shape[1] == 5
-        shape_cost = -generalized_box_iou(preds[:, :4], targets[:, :4])
-        class_cost = -(preds[:, 4][:, None] == targets[:, 4][None, :]).astype(np.int32)
+    i_cls = 6 if is_3d else 4
+    shape_cost = -generalized_box_iou_3d(preds[:, :i_cls], targets[:, :i_cls])
+    class_cost = -(preds[:, i_cls][:, None] == targets[:, i_cls][None, :]).astype(np.int32)
     cost_matrix = shape_cost * shape_weight + class_cost * class_weight
     pred_inds, target_inds = linear_sum_assignment(cost_matrix)
 
@@ -110,13 +106,13 @@ def box_iou(boxes1: np.ndarray, boxes2: np.ndarray) -> np.ndarray:
     yA = np.maximum(y1_min[:, np.newaxis], y2_min)
     xB = np.minimum(x1_max[:, np.newaxis], x2_max)
     yB = np.minimum(y1_max[:, np.newaxis], y2_max)
-    interArea = np.maximum(0, xB - xA) * np.maximum(0, yB - yA)
+    inter_area = np.maximum(0, xB - xA) * np.maximum(0, yB - yA)
 
     # Compute the union areas
-    unionArea = area1[:, np.newaxis] + area2 - interArea
+    union_area = area1[:, np.newaxis] + area2 - inter_area
 
     # Compute the intersection over union
-    return interArea / unionArea
+    return inter_area / union_area
 
 
 def box_iou_3d(boxes1: np.ndarray, boxes2: np.ndarray) -> np.ndarray:
@@ -139,13 +135,13 @@ def box_iou_3d(boxes1: np.ndarray, boxes2: np.ndarray) -> np.ndarray:
     xB = np.minimum(x1_max[:, np.newaxis], x2_max)
     yB = np.minimum(y1_max[:, np.newaxis], y2_max)
     zB = np.minimum(z1_max[:, np.newaxis], z2_max)
-    interArea = np.maximum(0, xB - xA) * np.maximum(0, yB - yA) * np.maximum(0, zB - zA)
+    inter_area = np.maximum(0, xB - xA) * np.maximum(0, yB - yA) * np.maximum(0, zB - zA)
 
     # Compute the union areas
-    unionArea = area1[:, np.newaxis] + area2 - interArea
+    union_area = area1[:, np.newaxis] + area2 - inter_area
 
     # Compute the intersection over union
-    return interArea / unionArea
+    return inter_area / union_area
 
 
 def generalized_box_iou(boxes1: np.ndarray, boxes2: np.ndarray) -> np.ndarray:
@@ -166,20 +162,20 @@ def generalized_box_iou(boxes1: np.ndarray, boxes2: np.ndarray) -> np.ndarray:
     yA = np.maximum(y1_min[:, np.newaxis], y2_min)
     xB = np.minimum(x1_max[:, np.newaxis], x2_max)
     yB = np.minimum(y1_max[:, np.newaxis], y2_max)
-    interArea = np.maximum(0, xB - xA) * np.maximum(0, yB - yA)
+    inter_area = np.maximum(0, xB - xA) * np.maximum(0, yB - yA)
 
     # Compute the union areas
-    unionArea = area1[:, np.newaxis] + area2 - interArea
+    union_area = area1[:, np.newaxis] + area2 - inter_area
 
     # Compute the enclosing box
     xC = np.minimum(x1_min[:, np.newaxis], x2_min)
     yC = np.minimum(y1_min[:, np.newaxis], y2_min)
     xD = np.maximum(x1_max[:, np.newaxis], x2_max)
     yD = np.maximum(y1_max[:, np.newaxis], y2_max)
-    encArea = np.maximum(0, xD - xC) * np.maximum(0, yD - yC)
+    enc_area = np.maximum(0, xD - xC) * np.maximum(0, yD - yC)
 
     # Compute the generalized intersection over union
-    return interArea / unionArea - (encArea - unionArea) / encArea
+    return inter_area / union_area - (enc_area - union_area) / enc_area
 
 
 def generalized_box_iou_3d(boxes1: np.ndarray, boxes2: np.ndarray) -> np.ndarray:
@@ -202,10 +198,10 @@ def generalized_box_iou_3d(boxes1: np.ndarray, boxes2: np.ndarray) -> np.ndarray
     xB = np.minimum(x1_max[:, np.newaxis], x2_max)
     yB = np.minimum(y1_max[:, np.newaxis], y2_max)
     zB = np.minimum(z1_max[:, np.newaxis], z2_max)
-    interArea = np.maximum(0, xB - xA) * np.maximum(0, yB - yA) * np.maximum(0, zB - zA)
+    inter_area = np.maximum(0, xB - xA) * np.maximum(0, yB - yA) * np.maximum(0, zB - zA)
 
     # Compute the union areas
-    unionArea = area1[:, np.newaxis] + area2 - interArea
+    union_area = area1[:, np.newaxis] + area2 - inter_area
 
     # Compute the enclosing box
     xC = np.minimum(x1_min[:, np.newaxis], x2_min)
@@ -214,7 +210,7 @@ def generalized_box_iou_3d(boxes1: np.ndarray, boxes2: np.ndarray) -> np.ndarray
     xD = np.maximum(x1_max[:, np.newaxis], x2_max)
     yD = np.maximum(y1_max[:, np.newaxis], y2_max)
     zD = np.maximum(z1_max[:, np.newaxis], z2_max)
-    encArea = np.maximum(0, xD - xC) * np.maximum(0, yD - yC) * np.maximum(0, zD - zC)
+    enc_area = np.maximum(0, xD - xC) * np.maximum(0, yD - yC) * np.maximum(0, zD - zC)
 
     # Compute the generalized intersection over union
-    return interArea / unionArea - (encArea - unionArea) / encArea
+    return inter_area / union_area - (enc_area - union_area) / enc_area

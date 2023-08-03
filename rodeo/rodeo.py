@@ -53,6 +53,9 @@ class RoDeO:
         self.class_weight_matching: Optional[float] = class_weight_matching
         self.return_per_class: bool = return_per_class
         self.is_3d: bool = is_3d
+        self.i_pos = 3 if is_3d else 2
+        self.i_size = 6 if is_3d else 4
+        self.i_cls = 6 if is_3d else 4
 
         self.pred_boxes: List[np.ndarray]
         self.target_boxes: List[np.ndarray]
@@ -161,11 +164,11 @@ class RoDeO:
             for i, cls_name in enumerate(self.class_names):
                 key = f'RoDeO/{cls_name}'
                 # Filter class
-                matched_inds_c = matched_targets[:, 4] == i
+                matched_inds_c = matched_targets[:, self.i_cls] == i
                 matched_preds_c = matched_preds[matched_inds_c]
                 matched_targets_c = matched_targets[matched_inds_c]
-                unmatched_preds_c = unmatched_preds[unmatched_preds[:, 4] == i]
-                unmatched_targets_c = unmatched_targets[unmatched_targets[:, 4] == i]
+                unmatched_preds_c = unmatched_preds[unmatched_preds[:, self.i_cls] == i]
+                unmatched_targets_c = unmatched_targets[unmatched_targets[:, self.i_cls] == i]
                 # Compute scores
                 res[f'{key}/localization'] = self._localization_score(
                     matched_preds_c,
@@ -204,14 +207,9 @@ class RoDeO:
     ) -> float:
         r"""Compute the localization score (Eq. 2 in the paper)."""
         # Normalize predictions and targets by size of target boxes
-        if self.is_3d:
-            target_sizes = matched_targets[:, 3:6].repeat(2, axis=1)  # (n_matched, 6)
-            pred_center = get_center(matched_preds[:, :6] / target_sizes)  # (n_matched, 3)
-            target_center = get_center(matched_targets[:, :6] / target_sizes)  # (n_matched, 3)
-        else:
-            target_sizes = matched_targets[:, 2:4].repeat(2, axis=1)  # (n_matched, 4)
-            pred_center = get_center(matched_preds[:, :4] / target_sizes)  # (n_matched, 2)
-            target_center = get_center(matched_targets[:, :4] / target_sizes)  # (n_matched, 2)
+        target_sizes = matched_targets[:, self.i_pos:self.i_size].repeat(2, axis=1)  # (n_matched, 2/3)
+        pred_center = get_center(matched_preds[:, :self.i_size] / target_sizes)  # (n_matched, 2/3)
+        target_center = get_center(matched_targets[:, :self.i_size] / target_sizes)  # (n_matched, 2/3)
         # Get the euclidean distance between the centers
         matched_dists = np.power(pred_center - target_center, 2).sum(1)  # (n_matched)
         # Compute the score
@@ -256,11 +254,11 @@ class RoDeO:
         unmatched_targets: np.ndarray
     ) -> float:
         r"""Clamped matthews correlation coefficient (Eq. 4 in the paper)."""
-        pred_classes = matched_preds[:, 4]
+        pred_classes = matched_preds[:, self.i_cls]
         pred_multi_hot = np.zeros((len(pred_classes), self.num_classes))
         np.put_along_axis(pred_multi_hot, pred_classes[:, None].astype(np.int32), 1, 1)
 
-        target_classes = matched_targets[:, 4]
+        target_classes = matched_targets[:, self.i_cls]
         target_multi_hot = np.zeros((len(target_classes), self.num_classes))
         np.put_along_axis(target_multi_hot, target_classes[:, None].astype(np.int32), 1, 1)
 
@@ -305,11 +303,11 @@ class RoDeO:
 
         pred_multi_hot = np.zeros((len(self.pred_boxes), self.num_classes))
         for i, pred in enumerate(self.pred_boxes):
-            np.put_along_axis(pred_multi_hot[i], pred[:, 4].astype(np.int32), 1, 0)
+            np.put_along_axis(pred_multi_hot[i], pred[:, self.i_cls].astype(np.int32), 1, 0)
 
         target_multi_hot = np.zeros((len(self.pred_boxes), self.num_classes))
         for i, target in enumerate(self.target_boxes):
-            np.put_along_axis(target_multi_hot[i], target[:, 4].astype(np.int32), 1, 0)
+            np.put_along_axis(target_multi_hot[i], target[:, self.i_cls].astype(np.int32), 1, 0)
 
         mcc = matthews_corrcoef(pred_multi_hot.reshape(-1),
                                 target_multi_hot.reshape(-1))
