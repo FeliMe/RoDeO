@@ -16,16 +16,20 @@ def hungarian_matching(
     target boxes.
 
     Args:
-        preds: Array of predicted boxes (M_p x 5/7), each (x,y,w,h) or (x,y,z,w,h,d)
-        targets: Array of target boxes (M_t x 5/7), each (x,y,w,h) or (x,y,z,w,h,d)
+        preds: Array of predicted boxes (M_p x 5/7), each (x,y,w,h,cls) or (x,y,z,w,h,d,cls)
+        targets: Array of target boxes (M_t x 5/7), each (x,y,w,h,cls) or (x,y,z,w,h,d,cls)
         shape_weight: How to weight shape similarity in the cost matrix
         class_weight: How to weight class similarity in the cost matrix
         is_3d: Whether the boxes are 3D or not
     """
     assert preds.shape[1] == (7 if is_3d else 5) and targets.shape[1] == (7 if is_3d else 5)
     # Perform matching
-    i_cls = 6 if is_3d else 4
-    shape_cost = -generalized_box_iou_3d(preds[:, :i_cls], targets[:, :i_cls])
+    if is_3d:
+        i_cls = 6
+        shape_cost = -generalized_box_iou_3d(preds[:, :i_cls], targets[:, :i_cls])
+    else:
+        i_cls = 4
+        shape_cost = -generalized_box_iou(preds[:, :i_cls], targets[:, :i_cls])
     class_cost = -(preds[:, i_cls][:, None] == targets[:, i_cls][None, :]).astype(np.int32)
     cost_matrix = shape_cost * shape_weight + class_cost * class_weight
     pred_inds, target_inds = linear_sum_assignment(cost_matrix)
@@ -52,8 +56,8 @@ def centered_iou(preds: np.ndarray, targets: np.ndarray, is_3d: Optional[bool] =
     r"""Computes the IoU of pairs of centered boxes (aligned at upper left).
 
     Args:
-        preds: Tensor of predicted boxes (M x 4/6), each (x,y,w,h), or (x,y,z,w,h,d)
-        targets: Tensor of target boxes (M x 4/6), each (x,y,w,h), or (x,y,z,w,h,d)
+        preds: Tensor of predicted boxes (M_p x 4+), each (x,y,w,h,...) or (x,y,z,w,h,d,...)
+        targets: Tensor of target boxes (M_t x 4+), each (x,y,w,h,...) or (x,y,z,w,h,d,...)
         is_3d: Whether the boxes are 3D or not
     """
     preds = preds.copy()

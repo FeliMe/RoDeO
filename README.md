@@ -66,6 +66,45 @@ for key, val in score.items():
     print(f'{key}: {val}')
 ```
 
+If your detection model gives you confidence scores, the
+```.confidence_sweep()``` function of RoDeO will provide you with the optimal
+confidence thresholds for each class. An example:
+
+```python
+# Init RoDeO with two classes
+rodeo = RoDeO(class_names=['a', 'b'], return_per_class=True)
+# Add some predictions and targets
+pred = [np.array([[3.0, 3.0, 5.0, 6.0, 0.0, 0.2],
+                  [2.1, 2.1, 4.2, 4.1, 1.0, 0.3],
+                  [3.0, 3.0, 5.0, 6.0, 0.0, 0.2],
+                  [2.5, 2.6, 4.0, 4.0, 1.0, 0.1],
+                  [0.1, 0.1, 0.2, 0.1, 0.0, 0.8],
+                  [0.0, 0.3, 0.1, 0.1, 1.0, 0.9],
+                  [0.2, 0.2, 0.1, 0.1, 0.0, 1.0]])]
+target = [np.array([[0.0, 0.0, 0.1, 0.1, 0.0],
+                    [0.0, 0.2, 0.1, 0.1, 1.0]])]
+rodeo.add(pred, target)
+
+# Compute the score naively (ignoring the confidence scores)
+score = rodeo.compute()
+for key, val in score.items():
+    print(f'{key}: {val}')
+print()
+
+# Find the best confidence threshold for each class
+best_thresholds, best_scores = rodeo.confidence_sweep(n_thresholds=100)
+for key in best_thresholds:
+    print(f'{key}: best threshold: {best_thresholds[key]}')
+    print(f'{key}: best score: {best_scores[key]}')
+print()
+
+# Now compute RoDeO again, but with the best thresholds
+rodeo.return_per_class = False
+score = rodeo.compute(cls_thresholds=best_thresholds)
+for key, val in score.items():
+    print(f'{key}: {val}')
+```
+
 # Advantages of RoDeO
 
 1. AP@IoU benefits from severe overprediction at higher thresholds
